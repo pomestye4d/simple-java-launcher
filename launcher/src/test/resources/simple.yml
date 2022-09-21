@@ -1,0 +1,9 @@
+#comment 1
+simpleProperty: 123
+#comment 2
+simpleCollection:
+  - item 1
+  - item 2
+subconfig:
+  key: simple key
+  value: simple value
