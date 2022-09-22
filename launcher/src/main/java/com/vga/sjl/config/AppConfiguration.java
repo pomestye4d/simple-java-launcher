@@ -41,7 +41,7 @@ public class AppConfiguration implements ConfigurationNode {
         return new AppConfiguration(new SjlPropertiesConfigurationProvider(file));
     }
 
-    public static AppConfiguration fromYaml(InputStream is) throws IOException {
+    public static AppConfiguration fromYaml(InputStream is) {
         return new AppConfiguration(new SjlYamlConfigurationProvider(is));
     }
 
@@ -61,6 +61,32 @@ public class AppConfiguration implements ConfigurationNode {
     @Override
     public String getValue(String propertyName) {
         return provider.getConfiguration().getValue(propertyName);
+    }
+
+    public String computeValue(String propertyName, String defaultValue){
+        String normalizedPropertyName = propertyName;
+        if(propertyName != null){
+            normalizedPropertyName = propertyName.trim();
+            if(normalizedPropertyName.length() == 0){
+                normalizedPropertyName = null;
+            }
+        }
+        if(normalizedPropertyName == null){
+            throw new IllegalArgumentException("property name must be non empty string");
+        }
+        String result = System.getProperty(normalizedPropertyName);
+        if(result != null){
+            return result;
+        }
+        result = System.getenv(normalizedPropertyName);
+        if(result != null){
+            return result;
+        }
+        result = getValue(normalizedPropertyName);
+        if(result != null){
+            return result;
+        }
+        return defaultValue;
     }
 
     @Override

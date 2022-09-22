@@ -4,6 +4,8 @@ simpleProperty: 123
 simpleCollection:
   - item 1
   - item 2
+systemProperties:
+  com.vga.sjl.key: value
 subconfig:
   key: simple key
   value: simple value

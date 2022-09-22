@@ -87,7 +87,7 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
         }
         if(node instanceof SjlExtCollectionNode){
             List<Object> result = new ArrayList<>();
-            SjlExtCollectionNode<Object> collectionNode = (SjlExtCollectionNode<Object>) node;
+            @SuppressWarnings("unchecked") SjlExtCollectionNode<Object> collectionNode = (SjlExtCollectionNode<Object>) node;
             for(Object item: collectionNode.getValue()){
                 result.add(getConfigNode((SjlExtNode) item));
             }
@@ -120,10 +120,10 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
                 normalizedPropertyValue = null;
             }
         }
-        String[] parts = normalizedPropertyName.split("\\.");
+        List<String> parts = SjlConfigurationNodeImpl.split(normalizedPropertyName);
         SjlExtMappingNode node = yamlRootNode;
-        for(int n =0; n< parts.length-1; n++){
-            String part = parts[n];
+        for(int n =0; n< parts.size()-1; n++){
+            String part = parts.get(n);
             SjlExtNodeTuple tuple = node.getValue().stream().filter(it -> part.equals(((SjlExtScalarNode) it.getKeyNode()).getValue()))
                     .findFirst().orElse(null);
             if(tuple != null){
@@ -137,7 +137,7 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
             node.getValue().add(tuple);
             node = (SjlExtMappingNode) tuple.getValueNode();
         }
-        String lastPart = parts[parts.length -1];
+        String lastPart = parts.get(parts.size() -1);
         SjlExtNodeTuple tuple = node.getValue().stream().filter(it -> lastPart.equals(((SjlExtScalarNode) it.getKeyNode()).getValue()))
                 .findFirst().orElse(null);
         int idx = node.getValue().size();
@@ -149,8 +149,10 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
         updateConfigRootNode();
     }
 
+
+
     @Override
-    public synchronized void save(OutputStream os) throws IOException {
+    public synchronized void save(OutputStream os) {
 
         SjlExtYamlOutputStreamWriter writer = new SjlExtYamlOutputStreamWriter(os, StandardCharsets.UTF_8) {
             @Override

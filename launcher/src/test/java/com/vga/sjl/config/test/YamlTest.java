@@ -39,6 +39,7 @@ public class YamlTest {
             config = AppConfiguration.fromYaml(is);
         }
         Assertions.assertEquals("123" , config.getValue("simpleProperty"));
+        Assertions.assertEquals("value" , config.getValue("systemProperties.[com.vga.sjl.key]"));
         List<String> simpleCollection = config.getValues("simpleCollection");
         Assertions.assertEquals("item 1" , simpleCollection.get(0));
         Assertions.assertEquals("item 2" , simpleCollection.get(1));

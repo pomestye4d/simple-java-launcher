@@ -23,10 +23,7 @@ package com.vga.sjl.config.impl;
 
 import com.vga.sjl.config.model.ConfigurationNode;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SjlConfigurationNodeImpl implements ConfigurationNode {
 
@@ -37,16 +34,45 @@ public class SjlConfigurationNodeImpl implements ConfigurationNode {
         return getValuesInternal(propertyName, List.class);
     }
 
+    static List<String> split(String normalizedPropertyName) {
+        List<String> result = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean insideComplexProperty = false;
+        for(int n=0; n < normalizedPropertyName.length(); n++){
+            char c = normalizedPropertyName.charAt(n);
+            if(c == '.' && !insideComplexProperty){
+                if(sb.length() > 0) {
+                    result.add(sb.toString());
+                }
+                sb.setLength(0);
+                continue;
+            }
+            if(c == '['){
+                insideComplexProperty = true;
+                continue;
+            }
+            if(c == ']'){
+                insideComplexProperty = false;
+                continue;
+            }
+            sb.append(c);
+        }
+        if(sb.length() > 0){
+            result.add(sb.toString());
+        }
+        return result;
+    }
+
     @SuppressWarnings("unchecked")
     private<T> T getValuesInternal(String propertyName, Class<?> cls) {
         if(propertyName == null || propertyName.length() == 0){
             throw new IllegalArgumentException("property name must be a non empty string");
         }
-        String[] parts =  propertyName.split("\\.");
+        List<String> parts =  split(propertyName);
         Map<String, Object> conf = map;
-        for(int n = 0; n < parts.length; n++){
-            Object result = conf.get(parts[n]);
-            if(n == parts.length-1){
+        for(int n = 0; n < parts.size(); n++){
+            Object result = conf.get(parts.get(n));
+            if(n == parts.size()-1){
                 if(result == null){
                     return (T) (List.class.isAssignableFrom(cls) ? Collections.emptyList(): null);
                 }
@@ -64,7 +90,7 @@ public class SjlConfigurationNodeImpl implements ConfigurationNode {
                     if(sb.length() > 0){
                         sb.append(".");
                     }
-                    sb.append(parts[i]);
+                    sb.append(parts.get(i));
                 }
                 throw new IllegalArgumentException(String.format("value with property name %s is string instead of subconfiguration", sb));
             }
