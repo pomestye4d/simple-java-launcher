@@ -1,0 +1,4 @@
+sjl:
+  applicationClass: com.vga.sjl.demo.headless.HeadlessApplication
+tomcat:
+  port: 8080
