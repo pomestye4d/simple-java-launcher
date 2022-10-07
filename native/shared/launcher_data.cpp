@@ -3,7 +3,42 @@
 #include "utils.h"
 #include "configuration.h"
 #include <regex>
+#include <unistd.h>
 
+void LauncherData::processRestartScript() {
+    auto fileName = tempDirectory + pathDelimiter + "restart.dat";
+    if (std::filesystem::exists(fileName)) {
+        std::string str = readFile(fileName.c_str());
+        ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(str));
+        for (int n = 0; n < tree.num_children(tree.root_id()); n++) {
+            ryml::NodeRef node = tree[n];
+            auto op = getYamlValue(node, "operation");
+            if ("move" == op) {
+                auto to = getYamlValue(node, "to");
+                auto from = getYamlValue(node, "from");
+                if (std::filesystem::exists(from)) {
+                    if (std::filesystem::exists(to)) {
+                        std::filesystem::remove(std::filesystem::path(to));
+                    }
+                    std::filesystem::rename(std::filesystem::path(from), std::filesystem::path(to));
+                }
+                continue;
+            }
+            if ("delete" == op) {
+                auto file = getYamlValue(node, "file");
+                if (std::filesystem::exists(file)) {
+                    std::filesystem::remove_all(std::filesystem::path(file));
+                }
+                continue;
+            }
+            if ("sleep" == op) {
+                sleep(std::stoi(getYamlValue(node, "duration")));
+                continue;
+            }
+        }
+        std::filesystem::remove(fileName);
+    }
+}
 void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
     #ifdef __unix__
     std::string delimiter="/";

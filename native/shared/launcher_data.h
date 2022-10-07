@@ -14,6 +14,8 @@ public:
 
     void init(bool autoCreateTempDir, std::string currentDir);
 
+    void processRestartScript();
+
     std::string startCommand;
     std::string stopCommand;
     std::string statusCommand;

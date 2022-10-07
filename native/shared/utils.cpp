@@ -48,3 +48,4 @@ std::string string_format(const std::string fmt_str, ...) {
 bool endsWith(const std::string& str, const std::string& ending) {
     return str.compare(str.length() - ending.length(), ending.length(), ending) == 0;
 }
+

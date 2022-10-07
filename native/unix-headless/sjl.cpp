@@ -63,38 +63,7 @@ int main(int argc, char **argv) {
         signal(SIGTERM, signalHandler);
         auto res = system(launcherData.startCommand.c_str());
         if (res == 512) {
-            std::string fileName = launcherData.tempDirectory + launcherData.pathDelimiter + "restart.dat";
-            if (std::filesystem::exists(fileName)) {
-                std::string str = readFile(fileName.c_str());
-                ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(str));
-                for (int n = 0; n < tree.num_children(tree.root_id()); n++) {
-                    ryml::NodeRef node = tree[n];
-                    auto op = getYamlValue(node, "operation");
-                    if ("move" == op) {
-                        auto to = getYamlValue(node, "to");
-                        auto from = getYamlValue(node, "from");
-                        if (std::filesystem::exists(from)) {
-                            if (std::filesystem::exists(to)) {
-                                std::filesystem::remove(std::filesystem::path(to));
-                            }
-                            std::filesystem::rename(std::filesystem::path(from), std::filesystem::path(to));
-                        }
-                        continue;
-                    }
-                    if ("delete" == op) {
-                        auto file = getYamlValue(node, "file");
-                        if (std::filesystem::exists(file)) {
-                            std::filesystem::remove(std::filesystem::path(file));
-                        }
-                        continue;
-                    }
-                    if ("sleep" == op) {
-                        sleep(std::stoi(getYamlValue(node, "duration")));
-                        continue;
-                    }
-                }
-                std::filesystem::remove(fileName);
-            }
+            launcherData.processRestartScript();
             launcherData.init(true, argv[0]);
             continue;
         }
