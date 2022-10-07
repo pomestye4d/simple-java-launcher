@@ -5,7 +5,7 @@
 #include <regex>
 #include <unistd.h>
 
-void LauncherData::processRestartScript() {
+void LauncherData::processRestartScript() const {
     auto fileName = tempDirectory + pathDelimiter + "restart.dat";
     if (std::filesystem::exists(fileName)) {
         std::string str = readFile(fileName.c_str());
