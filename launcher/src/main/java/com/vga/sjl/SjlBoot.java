@@ -206,7 +206,10 @@ public class SjlBoot {
             throw e;
         }
         if(argsList.contains("-background")){
-            new SjlControlThread(port, app, fileLock, new File(tempDirectory, "lock.tmp")).start();
+            new SjlControlThread(port, ()->{
+                stopApplication(app, stopped);
+                return null;
+            }, fileLock, new File(tempDirectory, "lock.tmp")).start();
             logger.info("application started in background mode");
             return;
         }

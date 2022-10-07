@@ -22,6 +22,7 @@
 package com.vga.sjl.control;
 
 import com.vga.sjl.Application;
+import com.vga.sjl.SjlBoot;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,15 +32,19 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.channels.FileLock;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 
 public final class SjlControlThread extends Thread {
     private final ServerSocket serverSocket;
     private boolean appRunning;
-    private final Application app;
     private final FileLock lock;
     private final File tempFile;
+    private static final Object stopLock = new Object();
+    private final Callable<Void> stopCallback;
+
 
     interface RequestHandler {
 
@@ -125,13 +130,13 @@ public final class SjlControlThread extends Thread {
         });
     }
 
-    public SjlControlThread(int port, Application app, FileLock lock, File tempFile) throws Exception {
+    public SjlControlThread(int port, Callable<Void> stopCallback, FileLock lock, File tempFile) throws Exception {
         InetAddress host = InetAddress.getByName("localhost");
         this.serverSocket = new ServerSocket(port, 1, host);
         this.appRunning = true;
-        this.app = app;
         this.lock = lock;
         this.tempFile = tempFile;
+        this.stopCallback = stopCallback;
         this.setName("sjl-application-control-thread");
     }
 
@@ -240,7 +245,7 @@ public final class SjlControlThread extends Thread {
         println("stopping application");
 
         try {
-            this.app.stop();
+            stopCallback.call();
         } catch (Exception e) {
             println(prepareLog("an error has occurred while stopping application", e));
             return;
@@ -261,6 +266,23 @@ public final class SjlControlThread extends Thread {
             }
 
             return true;
+        }
+    }
+
+    public static void stopApplication(Application app, AtomicReference<Boolean> stopped) {
+        Logger logger = Logger.getLogger(SjlBoot.class.getName());
+        synchronized (stopLock) {
+            if (!stopped.get()) {
+                logger.info("stopping application");
+                stopped.set(true);
+                try {
+                    app.stop();
+                    logger.info("application is stopped");
+                } catch (Throwable e) {
+                    logger.warning(SjlControlThread.prepareLog("unable to stop application", e));
+                }
+            }
+            stopLock.notifyAll();
         }
     }
 

@@ -22,7 +22,7 @@ configurations.create("dist"){
 task("createWebApp", Jar::class){
     dependsOn("build")
     from("webapp"){
-        archiveFileName.set(file("build/build/libs/webapp.war").absolutePath)
+        archiveFileName.set(file("build/webapps/webapp.war").absolutePath)
     }
 }
 task("dist"){
@@ -36,5 +36,6 @@ task("dist"){
             it.copyTo(file("build/dist/lib/${it.name}"))
         }
         file("config.yml").copyTo(file("build/dist/config.yml"))
+        file("build/webapps/webapp.war").copyTo(file("build/dist/lib/webapp.war"))
     }
 }

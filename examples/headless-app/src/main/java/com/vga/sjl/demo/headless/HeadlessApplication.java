@@ -28,28 +28,35 @@ import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.startup.Tomcat;
 
 import java.io.File;
+import java.net.URLDecoder;
 
 public class HeadlessApplication implements Application {
 
     private volatile Tomcat tomcat;
 
+    volatile static ApplicationCallback applicationCallback;
+
     @Override
     public void start(AppConfiguration config, ApplicationCallback callback) throws Exception {
+        HeadlessApplication.applicationCallback = callback;
         tomcat = new Tomcat();
-        File webappDir = new File("temp/tomcat-workdir/");
+        File webappDir = new File("temp/tomcat-workdir/webapps");
         if(!webappDir.exists()){
             webappDir.mkdirs();
         }
-        File baseDir = new File(webappDir, "webapps/ROOT");
-        baseDir.mkdirs();
-        tomcat.setBaseDir(webappDir.getAbsolutePath());
+        tomcat.setBaseDir(webappDir.getParentFile().getAbsolutePath());
         tomcat.setPort(Integer.parseInt(config.computeValue("tomcat.port", "8080")));
         tomcat.setHostname("localhost");
         tomcat.getConnector();
         tomcat.getServer().setParentClassLoader(getClass().getClassLoader());
         File war = new File("lib/webapp.war");
         File dir = new File("webapp");
-        StandardContext ctx = (StandardContext) tomcat.addWebapp("", dir.exists()? dir.getAbsolutePath(): war.getAbsolutePath());
+        StandardContext ctx;
+        if(dir.exists() && false) {
+            ctx = (StandardContext) tomcat.addWebapp("", dir.getAbsolutePath());
+        } else {
+            ctx = (StandardContext) tomcat.addWebapp("",new File(URLDecoder.decode(war.toURI().toURL().getFile(), "UTF-8")).getAbsolutePath());
+        }
         ctx.setDelegate(true);
         ctx.setTldValidation(false);
         ctx.setXmlValidation(false);
