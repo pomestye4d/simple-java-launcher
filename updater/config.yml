@@ -4,6 +4,7 @@ sjl:
   arguments:
     common:
       - --add-opens=java.base/java.io=ALL-UNNAMED
+      - -Dlogback.configurationFile=logback.xml
 tomcat:
   port: 8081
 

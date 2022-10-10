@@ -49,11 +49,11 @@ public class SjlBoot {
         if (configFileName == null) {
             configFileName = System.getProperty("sjl.configFile");
         }
-        if (configFileName == null && new File(String.format("config%sconfig.yaml",File.pathSeparator)).exists()) {
-            configFileName = String.format("config%sconfig.yaml",File.pathSeparator);
+        if (configFileName == null && new File(String.format("config%sconfig.yaml",File.separator)).exists()) {
+            configFileName = String.format("config%sconfig.yaml",File.separator);
         }
-        if (configFileName == null && new File(String.format("config%sconfig.yml",File.pathSeparator)).exists()) {
-            configFileName = String.format("config%sconfig.yml",File.pathSeparator);
+        if (configFileName == null && new File(String.format("config%sconfig.yml",File.separator)).exists()) {
+            configFileName = String.format("config%sconfig.yml",File.separator);
         }
         if (configFileName == null && new File("config.yaml").exists()) {
             configFileName = "config.yaml";
@@ -61,8 +61,8 @@ public class SjlBoot {
         if (configFileName == null && new File("config.yml").exists()) {
             configFileName = "config.yml";
         }
-        if (configFileName == null && new File(String.format("config%sconfig.properties",File.pathSeparator)).exists()) {
-            configFileName = String.format("config%sconfig.properties",File.pathSeparator);
+        if (configFileName == null && new File(String.format("config%sconfig.properties",File.separator)).exists()) {
+            configFileName = String.format("config%sconfig.properties",File.separator);
         }
         if (configFileName == null && new File("config.properties").exists()) {
             configFileName = "config.properties";
@@ -73,7 +73,6 @@ public class SjlBoot {
         if (!configFileName.endsWith(".yaml") && !configFileName.endsWith(".yml") && !configFileName.endsWith(".properties")) {
             throw new IllegalArgumentException(String.format("Config file %s has wrong extension", configFileName));
         }
-        Logger logger = Logger.getLogger(SjlBoot.class.getName());
         File configFile = new File(configFileName);
         if (!configFile.exists()) {
             throw new IllegalArgumentException(String.format("Config file %s does not exist", configFile.getAbsolutePath()));
@@ -136,7 +135,10 @@ public class SjlBoot {
             }
         }
         ClassLoader cl = new URLClassLoader(urls.toArray(new URL[0]), SjlBoot.class.getClassLoader());
+        Thread.currentThread().setContextClassLoader(cl);
         Application app = (Application) cl.loadClass(applicationClass).getConstructor().newInstance();
+
+        Logger logger = Logger.getLogger(SjlBoot.class.getName());
 
         AtomicReference<Boolean> stopped = new AtomicReference<>(false);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> stopApplication(app, stopped)));

@@ -48,7 +48,7 @@ public class UpdaterApplication implements Application {
         Globals.configuration = configuration;
         Globals.repository = repository;
         tomcat = new Tomcat();
-        File webappDir = new File(configuration.updaterTempFolder, String.format("tomcat-workdir%swebapps", File.pathSeparator));
+        File webappDir = new File(configuration.updaterTempFolder, String.format("tomcat-workdir%swebapps", File.separator));
         if(!webappDir.exists()){
             webappDir.mkdirs();
         }
@@ -57,7 +57,7 @@ public class UpdaterApplication implements Application {
         tomcat.setHostname("localhost");
         tomcat.getConnector();
         tomcat.getServer().setParentClassLoader(getClass().getClassLoader());
-        File war = new File(String.format("lib%swebapp.war",File.pathSeparator));
+        File war = new File(String.format("lib%swebapp.war",File.separator));
         File dir = new File("webapp");
         StandardContext ctx;
         if(dir.exists()) {

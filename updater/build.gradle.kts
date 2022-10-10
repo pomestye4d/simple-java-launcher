@@ -36,11 +36,12 @@ task("dist"){
     doLast {
         file("build/dist").deleteRecursively()
         file("build/dist/lib").mkdirs()
-        file("build/libs/updater.jar").copyTo(file("build/dist/lib/updater"))
+        file("build/libs/updater.jar").copyTo(file("build/dist/lib/updater.jar"))
         configurations.getByName("dist").forEach {
             it.copyTo(file("build/dist/lib/${it.name}"))
         }
         file("config.yml").copyTo(file("build/dist/config.yml"))
+        file("logback.xml").copyTo(file("build/dist/logback.xml"))
         file("build/webapps/webapp.war").copyTo(file("build/dist/lib/webapp.war"))
         file("../native/unix-headless/cmake-build-debug/sjl").copyTo(file("build/dist/updater"))
         file("build/dist/updater").setExecutable(true)
