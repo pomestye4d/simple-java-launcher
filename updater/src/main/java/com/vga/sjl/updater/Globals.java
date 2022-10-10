@@ -19,25 +19,10 @@
  * SOFTWARE.
  */
 
-package com.vga.sjl.config.model;
+package com.vga.sjl.updater;
 
-import java.util.List;
-
-/*
- * propertyName can be concatenation of other subproperties separeted by dot
- * for example server.port
- * returned List is unmodifiable
- */
-public interface ConfigurationNode {
-
-    List<String> getValues(String propertyName);
-
-    String getValue(String propertyName);
-
-    ConfigurationNode getSubConfiguration(String propertyName);
-
-    List<ConfigurationNode> getSubConfigurations(String propertyName);
-
-    List<String> getPropertyNames();
-
+public class Globals {
+    public volatile static Repository repository;
+    public volatile static Configuration configuration;
+    public volatile static ApplicationHandler applicationHandler;
 }

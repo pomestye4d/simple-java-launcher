@@ -44,9 +44,10 @@ public final class SjlControlThread extends Thread {
     private final File tempFile;
     private static final Object stopLock = new Object();
     private final Callable<Void> stopCallback;
+    private volatile  boolean restartApp;
 
 
-    interface RequestHandler {
+    public interface RequestHandler {
 
         byte[] getRequest();
 
@@ -54,7 +55,7 @@ public final class SjlControlThread extends Thread {
 
     }
 
-    private static boolean makeRequest(int port, RequestHandler handler) {
+    public static boolean makeRequest(int port, RequestHandler handler) {
         try {
             InetAddress host = InetAddress.getByName("localhost");
             try (Socket socket = new Socket(host, port)) {
@@ -170,7 +171,9 @@ public final class SjlControlThread extends Thread {
                 releaseLock(lock, tempFile);
             }
         }
-
+        if(restartApp){
+            System.exit(2);
+        }
     }
 
     private synchronized boolean handleRequest(Socket clientSocket) {
@@ -209,7 +212,12 @@ public final class SjlControlThread extends Thread {
                 this.stopApplication();
                 result = true;
                 commandResult = "OK: stop done";
-            } else if (command.toString().startsWith("PING")) {
+            } if ("RESTART".equals(command.toString())) {
+                this.stopApplication();
+                result = true;
+                restartApp = true;
+                commandResult = "RESTART: restart done";
+            }else if (command.toString().startsWith("PING")) {
                 commandResult = "OK: " + command.substring("PING".length());
             } else {
                 commandResult = "ERROR: unknown command";

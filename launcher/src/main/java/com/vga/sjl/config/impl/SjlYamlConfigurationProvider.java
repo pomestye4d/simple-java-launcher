@@ -163,9 +163,9 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
         new SjlExtDump(settings).dumpNode(yamlRootNode, writer);
     }
 
-    static class SjlYamlLoad extends SjlExtLoad{
+    public static class SjlYamlLoad extends SjlExtLoad{
 
-        SjlYamlLoad() {
+        public SjlYamlLoad() {
             super(createSettings());
         }
 
@@ -173,7 +173,7 @@ public class SjlYamlConfigurationProvider implements ConfigurationProvider {
             return SjlExtLoadSettings.builder().setParseComments(true).build();
         }
 
-        SjlExtMappingNode load(InputStream is){
+        public SjlExtMappingNode load(InputStream is){
             Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8);
             SjlExtComposer composer = createComposer(reader);
             return (SjlExtMappingNode) composer.getSingleNode().orElse(null);

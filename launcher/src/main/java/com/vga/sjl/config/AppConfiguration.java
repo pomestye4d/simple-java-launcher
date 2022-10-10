@@ -99,6 +99,11 @@ public class AppConfiguration implements ConfigurationNode {
         return provider.getConfiguration().getSubConfigurations(propertyName);
     }
 
+    @Override
+    public List<String> getPropertyNames() {
+        return provider.getConfiguration().getPropertyNames();
+    }
+
     public void setProperty(String propertyName, String value){
         provider.setProperty(propertyName, value);
     }

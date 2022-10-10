@@ -19,37 +19,45 @@
  * SOFTWARE.
  */
 
-package com.vga.sjl.demo.headless;
+package com.vga.sjl.updater;
 
 import com.vga.sjl.Application;
 import com.vga.sjl.ApplicationCallback;
 import com.vga.sjl.config.AppConfiguration;
 import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.startup.Tomcat;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.File;
 import java.net.URLDecoder;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class HeadlessApplication implements Application {
+public class UpdaterApplication implements Application {
 
     private volatile Tomcat tomcat;
 
-    volatile static ApplicationCallback applicationCallback;
 
     @Override
     public void start(AppConfiguration config, ApplicationCallback callback) throws Exception {
-        HeadlessApplication.applicationCallback = callback;
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+        Logger.getLogger("").setLevel(Level.FINEST);
+        final Configuration configuration = new Configuration(config);
+        final Repository repository = new Repository(configuration);
+        Globals.configuration = configuration;
+        Globals.repository = repository;
         tomcat = new Tomcat();
-        File webappDir = new File("temp/tomcat-workdir/webapps");
+        File webappDir = new File(configuration.updaterTempFolder, String.format("tomcat-workdir%swebapps", File.pathSeparator));
         if(!webappDir.exists()){
             webappDir.mkdirs();
         }
         tomcat.setBaseDir(webappDir.getParentFile().getAbsolutePath());
-        tomcat.setPort(Integer.parseInt(config.computeValue("tomcat.port", "8080")));
+        tomcat.setPort(Integer.parseInt(config.computeValue("tomcat.port", "8081")));
         tomcat.setHostname("localhost");
         tomcat.getConnector();
         tomcat.getServer().setParentClassLoader(getClass().getClassLoader());
-        File war = new File("lib/webapp.war");
+        File war = new File(String.format("lib%swebapp.war",File.pathSeparator));
         File dir = new File("webapp");
         StandardContext ctx;
         if(dir.exists()) {

@@ -49,11 +49,11 @@ public class SjlBoot {
         if (configFileName == null) {
             configFileName = System.getProperty("sjl.configFile");
         }
-        if (configFileName == null && new File("config/config.yaml").exists()) {
-            configFileName = "config/config.yaml";
+        if (configFileName == null && new File(String.format("config%sconfig.yaml",File.pathSeparator)).exists()) {
+            configFileName = String.format("config%sconfig.yaml",File.pathSeparator);
         }
-        if (configFileName == null && new File("config/config.yml").exists()) {
-            configFileName = "config/config.yml";
+        if (configFileName == null && new File(String.format("config%sconfig.yml",File.pathSeparator)).exists()) {
+            configFileName = String.format("config%sconfig.yml",File.pathSeparator);
         }
         if (configFileName == null && new File("config.yaml").exists()) {
             configFileName = "config.yaml";
@@ -61,8 +61,8 @@ public class SjlBoot {
         if (configFileName == null && new File("config.yml").exists()) {
             configFileName = "config.yml";
         }
-        if (configFileName == null && new File("config/config.properties").exists()) {
-            configFileName = "config/config.properties";
+        if (configFileName == null && new File(String.format("config%sconfig.properties",File.pathSeparator)).exists()) {
+            configFileName = String.format("config%sconfig.properties",File.pathSeparator);
         }
         if (configFileName == null && new File("config.properties").exists()) {
             configFileName = "config.properties";
@@ -105,7 +105,10 @@ public class SjlBoot {
         if (applicationClass == null) {
             throw new IllegalArgumentException("application class is not defined");
         }
-        String tempDirectory = config.computeValue("sjl.tempDirectory", "temp");
+        File tempDirectory = new File(config.computeValue("sjl.tempDirectory", "temp"));
+        if(!tempDirectory.exists() && !tempDirectory.mkdirs()){
+            throw new IllegalArgumentException("unable to create temp directory " + tempDirectory.getAbsolutePath());
+        }
         File tempFile = new File(tempDirectory, "lock.tmp");
         FileLock fileLock = acquireLock(tempFile);
         String externalsFileName = config.computeValue("sjl.externalsFileName", "lib/externals.txt");
@@ -169,7 +172,7 @@ public class SjlBoot {
                                 if (op instanceof SleepOperation) {
                                     SleepOperation sop = (SleepOperation) op;
                                     Map<String, String> map = new HashMap<>();
-                                    map.put("operation", "move");
+                                    map.put("operation", "sleep");
                                     map.put("duration", String.valueOf(sop.duration));
                                     nodes.add(map);
                                 }

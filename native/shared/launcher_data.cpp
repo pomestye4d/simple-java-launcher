@@ -54,7 +54,7 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
     if (workingDirectoryEnv != nullptr) {
         workingDirectory = workingDirectoryEnv;
     }
-    if (workingDirectory.substr(0, 1) != "/") {
+    if (std::filesystem::path(workingDirectory).is_relative()) {
         workingDirectory = currentDir + delimiter + workingDirectory;
     }
     if (!std::filesystem::exists(workingDirectory)) {
@@ -111,13 +111,13 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
     } else {
         libFolderName = "lib";
     }
-    if (libFolderName.substr(0, 1) != delimiter) {
-        libFolderName = workingDirectory + "/" + libFolderName;
+    if (std::filesystem::path(libFolderName).is_relative()) {
+        libFolderName = workingDirectory + delimiter + libFolderName;
     }
     if (!std::filesystem::exists(libFolderName)) {
         throw std::invalid_argument(string_format("Config file name %s has wrong extension", configFileName.c_str()));
     }
-    char *tempDirEnv = std::getenv("sjl.tempDirectory");
+    char *tempDirEnv = std::getenv("sjl.tempFolder");
     std::string tempDir;
     if (tempDirEnv != nullptr) {
         tempDir = tempDirEnv;

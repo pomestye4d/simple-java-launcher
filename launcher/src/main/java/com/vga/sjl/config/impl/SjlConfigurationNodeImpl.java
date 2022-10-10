@@ -27,7 +27,7 @@ import java.util.*;
 
 public class SjlConfigurationNodeImpl implements ConfigurationNode {
 
-    final Map<String, Object> map = new HashMap<>();
+    final Map<String, Object> map = new LinkedHashMap<>();
 
     @Override
     public List<String> getValues(String propertyName) {
@@ -113,6 +113,11 @@ public class SjlConfigurationNodeImpl implements ConfigurationNode {
     @Override
     public List<ConfigurationNode> getSubConfigurations(String propertyName) {
         return getValuesInternal(propertyName, List.class);
+    }
+
+    @Override
+    public List<String> getPropertyNames() {
+        return new ArrayList<>(map.keySet());
     }
 
 }
