@@ -50,6 +50,7 @@ public class HeadlessApplicationServlet extends HttpServlet {
             new Thread(()->{
                 try {
                     Thread.sleep(3000L);
+                    System.out.println("updating");
                     List<RestartOperation> operations = new ArrayList<>();
                     int version = Integer.parseInt(new String(Files.readAllBytes(versionFile.toPath())));
                     version++;

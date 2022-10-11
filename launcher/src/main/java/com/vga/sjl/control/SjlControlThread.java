@@ -44,7 +44,7 @@ public final class SjlControlThread extends Thread {
     private final File tempFile;
     private static final Object stopLock = new Object();
     private final Callable<Void> stopCallback;
-    private volatile  boolean restartApp;
+    private volatile boolean restartApp;
 
 
     public interface RequestHandler {
@@ -171,7 +171,7 @@ public final class SjlControlThread extends Thread {
                 releaseLock(lock, tempFile);
             }
         }
-        if(restartApp){
+        if (restartApp) {
             System.exit(2);
         }
     }
@@ -212,12 +212,12 @@ public final class SjlControlThread extends Thread {
                 this.stopApplication();
                 result = true;
                 commandResult = "OK: stop done";
-            } if ("RESTART".equals(command.toString())) {
+            } else if ("RESTART".equals(command.toString())) {
                 this.stopApplication();
                 result = true;
                 restartApp = true;
                 commandResult = "RESTART: restart done";
-            }else if (command.toString().startsWith("PING")) {
+            } else if (command.toString().startsWith("PING")) {
                 commandResult = "OK: " + command.substring("PING".length());
             } else {
                 commandResult = "ERROR: unknown command";

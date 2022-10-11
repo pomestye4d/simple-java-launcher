@@ -47,6 +47,7 @@ public class UpdaterApplication implements Application {
         final Repository repository = new Repository(configuration);
         Globals.configuration = configuration;
         Globals.repository = repository;
+        Globals.applicationHandler = new ApplicationHandler();
         tomcat = new Tomcat();
         File webappDir = new File(configuration.updaterTempFolder, String.format("tomcat-workdir%swebapps", File.separator));
         if(!webappDir.exists()){

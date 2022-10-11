@@ -58,13 +58,17 @@ public class ApplicationHandler {
                     Files.move(moveOp.from.toPath(), moveOp.to.toPath());
                 }
             }
-            String[] envs = Globals.configuration.environment.entrySet().stream()
-                    .map(it-> String.format("%s=%s", it.getKey(), it.getValue())).toArray(String[]::new);
-            Process process = Runtime.getRuntime().exec(String.format("\"%s\" -background &", Globals.configuration.executable.getAbsolutePath()), envs, Globals.configuration.executable.getParentFile());
-            int exitValue = process.waitFor();
-            if(exitValue != 0) {
-                throw  new Exception("unable to start application");
-            }
+            new Thread( ()->{
+               try{
+                   String[] envs = Globals.configuration.environment.entrySet().stream()
+                           .map(it-> String.format("%s=%s", it.getKey(), it.getValue())).toArray(String[]::new);
+                   Process process = Runtime.getRuntime().exec(String.format("./%s -background", Globals.configuration.executable.getName()), envs, Globals.configuration.executable.getParentFile());
+                   process.waitFor();
+               } catch (Throwable t){
+                   //noops
+               }
+            }).start();
+
             return;
         }
 
@@ -106,7 +110,7 @@ public class ApplicationHandler {
         boolean restated = SjlControlThread.makeRequest(Globals.configuration.controlPort, new SjlControlThread.RequestHandler() {
             @Override
             public byte[] getRequest() {
-                return "STOP".getBytes();
+                return "RESTART".getBytes();
             }
 
             @Override

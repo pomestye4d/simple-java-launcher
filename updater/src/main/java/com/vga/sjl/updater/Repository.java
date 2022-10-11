@@ -83,7 +83,7 @@ public class Repository {
             String checkSum = null;
             if (existingLibsData != null) {
                 Map<String, String> eld = existingLibsData.stream().filter(it -> name.equals(it.get("name"))).findFirst().orElse(null);
-                if (eld != null && size.equals(eld.get("size")) && size.equals(eld.get("modified"))) {
+                if (eld != null && size.equals(eld.get("size")) && modified.equals(eld.get("modified"))) {
                     checkSum = eld.get("checkSum");
                 }
             }

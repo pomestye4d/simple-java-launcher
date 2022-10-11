@@ -9,6 +9,6 @@ tomcat:
   port: 8081
 
 app:
-  executable: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist/headless-app
-  libFolder: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist/lib
-  tempFolder: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist/temp
+  executable: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist2/headless-app
+  libFolder: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist2/lib
+  tempFolder: /home/avramenko/IdeaProjects/own/simple-java-launcher/examples/headless-app/build/dist2/temp

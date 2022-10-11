@@ -1,6 +1,13 @@
 plugins {
     java
 }
+buildscript {
+    dependencies{
+        classpath(files(File(projectDir.parentFile.parentFile, "gradle/sjl-gradle.jar")))
+        classpath("org.snakeyaml:snakeyaml-engine:2.5")
+        classpath("org.apache.httpcomponents.client5:httpclient5:5.1.3")
+    }
+}
 repositories{
     mavenCentral()
 }
@@ -41,4 +48,11 @@ task("dist"){
         file("../../native/unix-headless/cmake-build-debug/sjl").copyTo(file("build/dist/headless-app"))
         file("build/dist/headless-app").setExecutable(true)
     }
+}
+
+task("deploy", com.vga.sjl.gradle.UpdateTask::class){
+    group = "build"
+    localLibsDirectory = file("build/dist/lib")
+    remotePort = 8081
+    remoteHost = "localhost"
 }
