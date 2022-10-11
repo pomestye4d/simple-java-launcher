@@ -21,9 +21,16 @@
 
 package com.vga.sjl.gradle;
 
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.UserInfo;
+import groovy.lang.Closure;
+import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.file.CopySpec;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.util.internal.ConfigureUtil;
 import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.DumpSettings;
 import org.snakeyaml.engine.v2.api.YamlOutputStreamWriter;
@@ -47,32 +54,34 @@ public class UpdateTask extends DefaultTask {
     private File embeddedJava;
 
     @Internal
-    private String remoteHost;
+    private String host;
 
     @Internal
-    private int remotePort;
+    private int port;
 
     @Internal
     private int startWaitTime = 30;
+
+    private SshTunnelConfig sshTunnelConfig = new SshTunnelConfig();
 
     public void setLocalLibsDirectory(File localLibsDirectory) {
         this.localLibsDirectory = localLibsDirectory;
     }
 
-    public String getRemoteHost() {
-        return remoteHost;
+    public String getHost() {
+        return host;
     }
 
-    public void setRemoteHost(String remoteHost) {
-        this.remoteHost = remoteHost;
+    public void setHost(String host) {
+        this.host = host;
     }
 
-    public int getRemotePort() {
-        return remotePort;
+    public int getPort() {
+        return port;
     }
 
-    public void setRemotePort(int remotePort) {
-        this.remotePort = remotePort;
+    public void setPort(int port) {
+        this.port = port;
     }
 
     public File getLocalLibsDirectory() {
@@ -95,6 +104,11 @@ public class UpdateTask extends DefaultTask {
         return embeddedJava;
     }
 
+    public void ssh(Action<? super SshTunnelConfig> configureAction) {
+        configureAction.execute(sshTunnelConfig);
+        sshTunnelConfig.setActive(true);
+    }
+
     @TaskAction
     public void doUpdate() throws Exception{
         if(localLibsDirectory == null){
@@ -103,96 +117,146 @@ public class UpdateTask extends DefaultTask {
         if(!localLibsDirectory.exists()){
             throw new IllegalArgumentException(String.format("local lib directory %s does not exist", localLibsDirectory.getAbsolutePath()));
         }
-        Utils.println("indexing local repository");
-        Map<String,Object> localIndex = loadIndex();
-        Utils.println("getting index of remote repository");
-        String remoteIndexStr = Utils.requestString(String.format("http://%s:%s/getIndex",remoteHost, remotePort));
-        Map<String,Object> remoteIndex = new LinkedHashMap<>();
-        readData(remoteIndex, new ByteArrayInputStream(remoteIndexStr.getBytes(StandardCharsets.UTF_8)));
-        boolean uploadJava = false;
-        List<File> libsUpload = new ArrayList<>();
-        List<Map<String, String>> remoteOperations = new ArrayList<>();
-        List<Map<String,String>> localLibs = (List<Map<String, String>>) localIndex.get("libs");
-        List<Map<String,String>> remoteLibs = (List<Map<String, String>>) remoteIndex.get("libs");
-        for(Map<String, String> localLib: localLibs){
-            Map<String,String> remoteLib = remoteLibs.stream().filter(it -> localLib.get("name").equals(it.get("name"))).findFirst().orElse(null);
-            if(remoteLib != null && remoteLib.get("size").equals(localLib.get("size")) && remoteLib.get("checkSum").equals(localLib.get("checkSum"))){
-                remoteLibs.remove(remoteLib);
-                continue;
+        Session session= null;
+        if(sshTunnelConfig.isActive()) {
+            Utils.println("establishing ssh tunnel");
+            JSch jsch=new JSch();
+            if(sshTunnelConfig.getPrivateKey() != null && sshTunnelConfig.getPrivateKey().exists()){
+                jsch.addIdentity(sshTunnelConfig.getPrivateKey().getAbsolutePath());
             }
-            if(remoteLib != null){
-                remoteLibs.remove(remoteLib);
+            session=jsch.getSession(sshTunnelConfig.getLogin(), sshTunnelConfig.getSshHost(), sshTunnelConfig.getSshPort());
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.setUserInfo(new UserInfo() {
+                @Override
+                public String getPassphrase() {
+                    return null;
+                }
+
+                @Override
+                public String getPassword() {
+                    return sshTunnelConfig.getPassword();
+                }
+
+                @Override
+                public boolean promptPassword(String message) {
+                    return false;
+                }
+
+                @Override
+                public boolean promptPassphrase(String message) {
+                    return false;
+                }
+
+                @Override
+                public boolean promptYesNo(String message) {
+                    return true;
+                }
+
+                @Override
+                public void showMessage(String message) {
+                    //noops
+                }
+            });
+
+            session.connect();
+            session.setPortForwardingL(port, "localhost", sshTunnelConfig.getRemotePort());
+        }
+        try {
+            Utils.println("indexing local repository");
+            Map<String, Object> localIndex = loadIndex();
+            Utils.println("getting index of remote repository");
+            String remoteIndexStr = Utils.requestString(String.format("http://%s:%s/getIndex", host, port));
+            Map<String, Object> remoteIndex = new LinkedHashMap<>();
+            readData(remoteIndex, new ByteArrayInputStream(remoteIndexStr.getBytes(StandardCharsets.UTF_8)));
+            boolean uploadJava = false;
+            List<File> libsUpload = new ArrayList<>();
+            List<Map<String, String>> remoteOperations = new ArrayList<>();
+            List<Map<String, String>> localLibs = (List<Map<String, String>>) localIndex.get("libs");
+            List<Map<String, String>> remoteLibs = (List<Map<String, String>>) remoteIndex.get("libs");
+            for (Map<String, String> localLib : localLibs) {
+                Map<String, String> remoteLib = remoteLibs.stream().filter(it -> localLib.get("name").equals(it.get("name"))).findFirst().orElse(null);
+                if (remoteLib != null && remoteLib.get("size").equals(localLib.get("size")) && remoteLib.get("checkSum").equals(localLib.get("checkSum"))) {
+                    remoteLibs.remove(remoteLib);
+                    continue;
+                }
+                if (remoteLib != null) {
+                    remoteLibs.remove(remoteLib);
+                    Map<String, String> operation = new LinkedHashMap<>();
+                    operation.put("operation", "deleteLib");
+                    operation.put("file", localLib.get("name"));
+                    remoteOperations.add(operation);
+                }
+                libsUpload.add(new File(localLibsDirectory, localLib.get("name")));
                 Map<String, String> operation = new LinkedHashMap<>();
-                operation.put("operation", "deleteLib");
+                operation.put("operation", "moveLib");
                 operation.put("file", localLib.get("name"));
                 remoteOperations.add(operation);
             }
-            libsUpload.add(new File(localLibsDirectory, localLib.get("name")));
-            Map<String, String> operation = new LinkedHashMap<>();
-            operation.put("operation", "moveLib");
-            operation.put("file", localLib.get("name"));
-            remoteOperations.add(operation);
-        }
-        for(Map<String, String> remoteLib: remoteLibs){
-            Map<String, String> operation = new LinkedHashMap<>();
-            operation.put("operation", "deleteLib");
-            operation.put("file", remoteLib.get("name"));
-            remoteOperations.add(operation);
-        }
-        {
-            String java = (String) localIndex.get("java");
-            if(java != null && !"undefined".equals(java) && !java.equals(remoteIndex.get("java"))){
-                uploadJava = true;
-                {
-                    Map<String,String> operation = new HashMap<>();
-                    operation.put("operation", "deleteJava");
-                    remoteOperations.add(operation);
-                }
-                {
-                    Map<String,String> operation = new HashMap<>();
-                    operation.put("operation", "moveJava");
-                    remoteOperations.add(operation);
+            for (Map<String, String> remoteLib : remoteLibs) {
+                Map<String, String> operation = new LinkedHashMap<>();
+                operation.put("operation", "deleteLib");
+                operation.put("file", remoteLib.get("name"));
+                remoteOperations.add(operation);
+            }
+            {
+                String java = (String) localIndex.get("java");
+                if (java != null && !"undefined".equals(java) && !java.equals(remoteIndex.get("java"))) {
+                    uploadJava = true;
+                    {
+                        Map<String, String> operation = new HashMap<>();
+                        operation.put("operation", "deleteJava");
+                        remoteOperations.add(operation);
+                    }
+                    {
+                        Map<String, String> operation = new HashMap<>();
+                        operation.put("operation", "moveJava");
+                        remoteOperations.add(operation);
+                    }
                 }
             }
-        }
-        if(remoteOperations.isEmpty()){
-            Utils.println("nothing to update");
-            return;
-        }
-        if(uploadJava){
-            Utils.println("uploading java");
-            Utils.uploadFile(String.format("http://%s:%s/uploadJava",remoteHost, remotePort), embeddedJava);
-        }
-        for(File lib: libsUpload){
-            Utils.println("uploading lib file " + lib.getName());
-            Utils.uploadFile(String.format("http://%s:%s/uploadLib/%s",remoteHost, remotePort, URLEncoder.encode(lib.getName(), "UTF-8")), lib);
-        }
-        long started = System.currentTimeMillis();
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        YamlOutputStreamWriter writer = new YamlOutputStreamWriter(os, StandardCharsets.UTF_8) {
+            if (remoteOperations.isEmpty()) {
+                Utils.println("nothing to update");
+                return;
+            }
+            if (uploadJava) {
+                Utils.println("uploading java");
+                Utils.uploadFile(String.format("http://%s:%s/uploadJava", host, port), embeddedJava);
+            }
+            for (File lib : libsUpload) {
+                Utils.println("uploading lib file " + lib.getName());
+                Utils.uploadFile(String.format("http://%s:%s/uploadLib/%s", host, port, URLEncoder.encode(lib.getName(), "UTF-8")), lib);
+            }
+            long started = System.currentTimeMillis();
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            YamlOutputStreamWriter writer = new YamlOutputStreamWriter(os, StandardCharsets.UTF_8) {
                 @Override
                 public void processIOException(IOException e) {
                     throw new RuntimeException(e);
                 }
             };
-        DumpSettings settings = DumpSettings.builder().build();
-        new Dump(settings).dump(remoteOperations, writer);
-        Utils.println("restarting application");
-        Utils.uploadString(String.format("http://%s:%s/restartApp",remoteHost, remotePort), new String(os.toByteArray(), StandardCharsets.UTF_8));
-        while (System.currentTimeMillis() - started < TimeUnit.SECONDS.toMillis(startWaitTime)){
-            try{
-                String content = Utils.requestString(String.format("http://%s:%s/getState",remoteHost, remotePort));
-                if("RUNNING".equals(content)){
-                    Utils.println("application is successfully updated");
-                    return;
+            DumpSettings settings = DumpSettings.builder().build();
+            new Dump(settings).dump(remoteOperations, writer);
+            Utils.println("restarting application");
+            Utils.uploadString(String.format("http://%s:%s/restartApp", host, port), new String(os.toByteArray(), StandardCharsets.UTF_8));
+            while (System.currentTimeMillis() - started < TimeUnit.SECONDS.toMillis(startWaitTime)) {
+                try {
+                    String content = Utils.requestString(String.format("http://%s:%s/getState", host, port));
+                    if ("RUNNING".equals(content)) {
+                        Utils.println("application is successfully updated");
+                        return;
+                    }
+                } catch (Exception e) {
+                    //noops
                 }
-            } catch (Exception e){
-                //noops
+                Utils.println("waiting for application to start");
+                Thread.sleep(5000L);
             }
-            Utils.println("waiting for application to start");
-            Thread.sleep(5000L);
+            throw new IllegalStateException("unable to start application");
+        } finally {
+            if(session != null){
+                session.disconnect();
+            }
         }
-        throw  new IllegalStateException("unable to start application");
     }
 
     @SuppressWarnings("unchecked")

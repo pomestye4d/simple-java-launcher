@@ -9,6 +9,7 @@ dependencies{
     implementation(gradleApi())
     implementation("org.snakeyaml:snakeyaml-engine:2.5")
     implementation("org.apache.httpcomponents.client5:httpclient5:5.1.3")
+    implementation("com.jcraft:jsch:0.1.55")
 
 }
 
