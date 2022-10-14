@@ -5,6 +5,7 @@
 #ifndef PG_LAUNCHER_DATA_H
 #define PG_LAUNCHER_DATA_H
 #include <vector>
+#include <string>
 #include <map>
 class LauncherData  {
 public:

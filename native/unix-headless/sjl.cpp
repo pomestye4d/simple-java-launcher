@@ -7,7 +7,6 @@
 #include "launcher_data.h"
 #include "utils.h"
 #include "rapidyaml-0.4.1.hpp"
-#include "configuration.h"
 
 static LauncherData launcherData;
 
