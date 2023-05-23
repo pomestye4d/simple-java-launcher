@@ -1,7 +1,7 @@
 //
 // Created by avramenko on 16.09.2022.
 //
-
+#define _CRT_SECURE_NO_WARNINGS
 #ifndef PG_LAUNCHER_DATA_H
 #define PG_LAUNCHER_DATA_H
 #include <vector>
@@ -13,7 +13,7 @@ public:
 
     virtual ~LauncherData() = default;
 
-    void init(bool autoCreateTempDir, std::string currentDir);
+    void init(bool autoCreateTempDir, std::string currentDirectory);
 
     void processRestartScript() const;
 
@@ -23,5 +23,8 @@ public:
     std::string pidFileName;
     std::string pathDelimiter;
     std::string tempDirectory;
+    std::string serviceName;
+    std::string serviceDisplayName;
+    std::string serviceDescription;
 };
 #endif //PG_LAUNCHER_DATA_H

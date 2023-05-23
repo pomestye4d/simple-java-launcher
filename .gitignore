@@ -23,3 +23,10 @@
 hs_err_pid*
 /temp/
 /.gradle/
+/native/SampleService/SampleService/.vs/
+/native/gui/.vs/
+/native/windows-service/.vs/
+/native/SampleService/SampleService/Debug/
+/native/windows-service/.vs/
+/native/windows-service/x64/Debug/
+/.vs/

@@ -1,0 +1,5 @@
+sjl:
+  service:
+    name: sjl-service
+    displayName: Sjl Service
+    description: Sample Sjl Service

@@ -25,5 +25,8 @@ public:
     std::string libFolder;
     std::string tempFolder;
     std::string javaHome;
+    std::string serviceName;
+    std::string serviceDisplayName;
+    std::string serviceDescription;
 };
 #endif //PG_CONFIGURATION_H

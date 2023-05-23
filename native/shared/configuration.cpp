@@ -25,6 +25,12 @@ void Configuration::readFromProperties(const std::string& fileName) {
             stopArgs.push_back(props.GetProperty(name));
         }else if(name.find("sjl.arguments.status") != std::string::npos){
             statusArgs.push_back(props.GetProperty(name));
+        }else if (name.find("sjl.service.name") != std::string::npos) {
+            serviceName = props.GetProperty(name);
+        }else if (name.find("sjl.service.displayName") != std::string::npos) {
+            serviceDisplayName = props.GetProperty(name);
+        }else if (name.find("sjl.service.description") != std::string::npos) {
+            serviceDescription = props.GetProperty(name);
         }
     }
 }
@@ -48,8 +54,15 @@ std::string getYamlValue(c4::yml::NodeRef node, std::string key){
 }
 
 void Configuration::readFromYaml(const std::string& fileName) {
-    std::string str = readFile(fileName.c_str());
+    auto str = readFile(fileName.c_str());
     ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(str));
+    /*auto tree = ryml::parse_in_arena(R"(
+sjl:
+  service:
+    name: sjl - service
+    displayName : Sjl Service
+    description : Пример службы
+)");*/
     ryml::NodeRef sjlNode = tree["sjl"];
     if(sjlNode == nullptr) {
         return;
@@ -57,6 +70,12 @@ void Configuration::readFromYaml(const std::string& fileName) {
     libFolder = getYamlValue(sjlNode, "libFolder");
     tempFolder = getYamlValue(sjlNode, "tempFolder");
     javaHome = getYamlValue(sjlNode, "javaHome");
+    auto serviceNode = sjlNode["service"];
+    if (serviceNode != nullptr) {
+        serviceName = getYamlValue(serviceNode, "name");
+        serviceDisplayName = getYamlValue(serviceNode, "displayName");
+        serviceDescription = getYamlValue(serviceNode, "description");
+    }
     ryml::NodeRef vmOptionsNode = sjlNode["jvmOptions"];
     if(vmOptionsNode != nullptr){
         for(ryml::NodeRef const& child : vmOptionsNode.children()){

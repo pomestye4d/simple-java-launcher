@@ -3,12 +3,11 @@
 #include "utils.h"
 #include "configuration.h"
 #include <regex>
-#include <unistd.h>
 
 void LauncherData::processRestartScript() const {
     auto fileName = tempDirectory + pathDelimiter + "restart.dat";
     if (std::filesystem::exists(fileName)) {
-        std::string str = readFile(fileName.c_str());
+        auto str = readFile(fileName.c_str());
         ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(str));
         for (int n = 0; n < tree.num_children(tree.root_id()); n++) {
             ryml::NodeRef node = tree[n];
@@ -32,14 +31,14 @@ void LauncherData::processRestartScript() const {
                 continue;
             }
             if ("sleep" == op) {
-                sleep(std::stoi(getYamlValue(node, "duration")));
+                // sleep(std::stoi(getYamlValue(node, "duration")));
                 continue;
             }
         }
         std::filesystem::remove(fileName);
     }
 }
-void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
+void LauncherData::init(bool autoCreateTempDir, std::string currentDirectory) {
     #ifdef __unix__
     std::string delimiter="/";
     std::string javaExec = "bin/java";
@@ -47,15 +46,13 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
     std::string delimiter="\\";
     std::string javaExec = "bin\\java.exe";
     #endif
-    auto idx = currentDir.find_last_of(delimiter);
-    currentDir = currentDir.substr(0, idx);
-    std::string workingDirectory = currentDir;
+    auto workingDirectory = currentDirectory;
     char *workingDirectoryEnv = std::getenv("sjl.workingDirectory");
     if (workingDirectoryEnv != nullptr) {
         workingDirectory = workingDirectoryEnv;
     }
     if (std::filesystem::path(workingDirectory).is_relative()) {
-        workingDirectory = currentDir + delimiter + workingDirectory;
+        workingDirectory = currentDirectory + delimiter + workingDirectory;
     }
     if (!std::filesystem::exists(workingDirectory)) {
         throw std::invalid_argument(string_format("Working directory %s does not exist", workingDirectory.c_str()));
@@ -115,7 +112,7 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
         libFolderName = workingDirectory + delimiter + libFolderName;
     }
     if (!std::filesystem::exists(libFolderName)) {
-        throw std::invalid_argument(string_format("Config file name %s has wrong extension", configFileName.c_str()));
+        throw std::invalid_argument(string_format("Lib folder %s does not exist", libFolderName.c_str()));
     }
     char *tempDirEnv = std::getenv("sjl.tempFolder");
     std::string tempDir;
@@ -172,7 +169,7 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
     pidFileName = tempDir + delimiter+"sjl.pid";
     std::string command = string_format(R"(cd "%s" && "%s" -cp "%s")", workingDirectory.c_str(), javaCmd.c_str(),
                                         launcherFileName.c_str());
-    for (const auto& arg: config.commonArgs) {
+for (const auto& arg: config.commonArgs) {
         command += " " + arg;
     }
     startCommand = command;
@@ -190,4 +187,8 @@ void LauncherData::init(bool autoCreateTempDir, std::string currentDir) {
         statusCommand += " " + arg;
     }
     statusCommand +=" com.vga.sjl.SjlBoot status";
+    serviceName = config.serviceName;
+    serviceDisplayName = config.serviceDisplayName;
+    serviceDescription = config.serviceDescription;
+    
 }
