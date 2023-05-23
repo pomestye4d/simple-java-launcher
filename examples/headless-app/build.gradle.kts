@@ -3,7 +3,7 @@ plugins {
 }
 buildscript {
     dependencies{
-        classpath(files(File(projectDir.parentFile.parentFile, "gradle/sjl-gradle.jar")))
+        classpath(files(File(projectDir.parentFile.parentFile, "local-artifacts/sjl-gradle.jar")))
         classpath("org.snakeyaml:snakeyaml-engine:2.5")
         classpath("org.apache.httpcomponents.client5:httpclient5:5.1.3")
         classpath("com.jcraft:jsch:0.1.55")
