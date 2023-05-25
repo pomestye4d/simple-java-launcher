@@ -1,5 +1,0 @@
-sjl:
-  applicationClass: com.vga.sjl.demo.gui.GuiApplication
-  arguments:
-    common:
-      - --add-opens=java.base/java.io=ALL-UNNAMED

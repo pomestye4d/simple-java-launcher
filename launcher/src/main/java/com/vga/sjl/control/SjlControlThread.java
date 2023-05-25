@@ -21,33 +21,26 @@
 
 package com.vga.sjl.control;
 
-import com.vga.sjl.Application;
-import com.vga.sjl.SjlBoot;
+import com.vga.sjl.utils.SjlUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.channels.FileLock;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 
 public final class SjlControlThread extends Thread {
     private final ServerSocket serverSocket;
     private boolean appRunning;
-    private final FileLock lock;
-    private final File tempFile;
-    private static final Object stopLock = new Object();
     private final Callable<Void> stopCallback;
     private volatile boolean restartApp;
 
 
-    public interface RequestHandler {
+    interface RequestHandler {
 
         byte[] getRequest();
 
@@ -55,7 +48,7 @@ public final class SjlControlThread extends Thread {
 
     }
 
-    public static boolean makeRequest(int port, RequestHandler handler) {
+    static boolean makeRequest(int port, RequestHandler handler) {
         try {
             InetAddress host = InetAddress.getByName("localhost");
             try (Socket socket = new Socket(host, port)) {
@@ -131,12 +124,10 @@ public final class SjlControlThread extends Thread {
         });
     }
 
-    public SjlControlThread(int port, Callable<Void> stopCallback, FileLock lock, File tempFile) throws Exception {
+    public SjlControlThread(int port, Callable<Void> stopCallback) throws Exception {
         InetAddress host = InetAddress.getByName("localhost");
         this.serverSocket = new ServerSocket(port, 1, host);
         this.appRunning = true;
-        this.lock = lock;
-        this.tempFile = tempFile;
         this.stopCallback = stopCallback;
         this.setName("sjl-application-control-thread");
     }
@@ -153,7 +144,7 @@ public final class SjlControlThread extends Thread {
                         //noops
                     }
                 } catch (Exception e) {
-                    println(prepareLog("error on server socket", e));
+                    println(SjlUtils.prepareLogMessage("error on server socket", e));
                     break;
                 }
             }
@@ -161,14 +152,11 @@ public final class SjlControlThread extends Thread {
             try {
                 this.serverSocket.close();
             } catch (IOException e) {
-                println(prepareLog("error closing server socket", e));
+                println(SjlUtils.prepareLogMessage("error closing server socket", e));
             }
 
             if (this.appRunning) {
                 this.stopApplication();
-            }
-            if (lock != null) {
-                releaseLock(lock, tempFile);
             }
         }
         if (restartApp) {
@@ -229,13 +217,13 @@ public final class SjlControlThread extends Thread {
             clientSocket.shutdownOutput();
 
         } catch (IOException e) {
-            println(prepareLog("error processing control request", e));
+            println(SjlUtils.prepareLogMessage("error processing control request", e));
         } finally {
             if (out != null) {
                 try {
                     out.close();
                 } catch (IOException e) {
-                    println(prepareLog("error closing socket", e));
+                    println(SjlUtils.prepareLogMessage("error closing socket", e));
                 }
             }
         }
@@ -255,7 +243,7 @@ public final class SjlControlThread extends Thread {
         try {
             stopCallback.call();
         } catch (Exception e) {
-            println(prepareLog("an error has occurred while stopping application", e));
+            println(SjlUtils.prepareLogMessage("an error has occurred while stopping application", e));
             return;
         }
         println("application stopped from control thread");
@@ -277,72 +265,9 @@ public final class SjlControlThread extends Thread {
         }
     }
 
-    public static void stopApplication(Application app, AtomicReference<Boolean> stopped) {
-        Logger logger = Logger.getLogger(SjlBoot.class.getName());
-        synchronized (stopLock) {
-            if (!stopped.get()) {
-                logger.info("stopping application");
-                stopped.set(true);
-                try {
-                    app.stop();
-                    logger.info("application is stopped");
-                } catch (Throwable e) {
-                    logger.warning(SjlControlThread.prepareLog("unable to stop application", e));
-                }
-            }
-            stopLock.notifyAll();
-        }
-    }
+
 
     private static void println(String text) {
         Logger.getLogger(SjlControlThread.class.getName()).info(text);
-    }
-
-    public static String prepareLog(String message, Throwable t) {
-        StringBuilder sb = new StringBuilder(message);
-        printError(t, null, sb);
-        return sb.toString();
-    }
-
-    private static boolean isBlank(String str) {
-        return str == null || str.trim().length() == 0;
-    }
-
-    private static void printError(Throwable t, String header, StringBuilder sb) {
-        if (t == null) {
-            return;
-        }
-        String nl = System.getProperty("line.separator");
-        if (!isBlank(header)) {
-            sb.append(nl).append(header).append(nl).append(nl);
-        }
-        for (StackTraceElement element : t.getStackTrace()) {
-            printStackTraceElement(element, sb).append(nl);
-        }
-        Throwable next = t.getCause();
-        if (next != null) {
-            printError(next, "Caused by " + next.getMessage(), sb);
-        }
-    }
-
-    private static StringBuilder printStackTraceElement(StackTraceElement ste, StringBuilder sb) {
-        sb.append(String.format("%s.%s(%s)", ste.getClassName(), ste.getMethodName(),
-                ste.isNativeMethod() ? "Native Method" : String.format("%s%s", ste.getFileName(), ste.getLineNumber() > 0 ? ste.getLineNumber() : "")
-        ));
-        return sb;
-    }
-
-    public static void releaseLock(FileLock lock, File tempFile) {
-        if (lock != null) {
-            try {
-                lock.release();
-                lock.channel().close();
-                if (tempFile.exists() && !tempFile.delete()) {
-                    throw new Exception("unable to delete temp file " + tempFile);
-                }
-            } catch (Exception e) {
-                println(prepareLog("error releasing lock", e));
-            }
-        }
     }
 }
