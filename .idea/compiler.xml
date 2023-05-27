@@ -6,8 +6,6 @@
       <module name="simple-java-launcher.examples.gui-app" target="16" />
       <module name="simple-java-launcher.examples.gui-app.main" target="16" />
       <module name="simple-java-launcher.examples.gui-app.test" target="16" />
-      <module name="simple-java-launcher.examples.headless-app.main" target="8" />
-      <module name="simple-java-launcher.examples.headless-app.test" target="8" />
       <module name="simple-java-launcher.updater.main" target="8" />
       <module name="simple-java-launcher.updater.test" target="8" />
     </bytecodeTargetLevel>

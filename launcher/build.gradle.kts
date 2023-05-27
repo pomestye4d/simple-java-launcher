@@ -28,13 +28,12 @@ tasks.test {
 publishing{
     publications{
         create<MavenPublication>("launcher") {
-            groupId = "com.vga"
-            artifactId = "sjl-launcher"
+            groupId = "com.vga.sjl"
+            artifactId = "launcher"
             version = "0.0.1"
             from(components["java"])
         }
     }
-    println(project.file("../local-maven-repository").toURI())
     repositories {
         maven{
             name = "projectLocal"
