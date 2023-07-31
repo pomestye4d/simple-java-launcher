@@ -49,15 +49,3 @@ dist {
         archiveType = DistributionArchiveType.TARGZ
     }
 }
-
-task("test2"){
-    group = "dist"
-    doLast {
-        val component = JavaPluginHelper.getJavaComponent(project)
-        val files = component.mainJarTask.get().outputs.files.plus(component.runtimeClasspathConfiguration);
-        files.forEach{
-            println(it.absolutePath)
-        }
-    }
-}
-

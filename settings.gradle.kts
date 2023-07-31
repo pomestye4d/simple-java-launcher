@@ -6,7 +6,7 @@ pluginManagement {
     repositories {
         maven{
             name="local-project"
-            url = uri("/home/avramenko/projects/own/simple-java-launcher/local-maven-repository")
+            url = uri("local-maven-repository")
         }
         gradlePluginPortal()
     }
