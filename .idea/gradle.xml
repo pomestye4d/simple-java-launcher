@@ -8,10 +8,12 @@
         <option name="testRunner" value="PLATFORM" />
         <option name="distributionType" value="DEFAULT_WRAPPED" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleJvm" value="17" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/examples" />
+            <option value="$PROJECT_DIR$/examples/gui-app" />
             <option value="$PROJECT_DIR$/examples/headless-app" />
             <option value="$PROJECT_DIR$/gradle-plugins" />
             <option value="$PROJECT_DIR$/gradle-plugins/dist" />

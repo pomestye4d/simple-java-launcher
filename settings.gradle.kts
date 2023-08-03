@@ -1,5 +1,6 @@
 include(":launcher")
 include(":examples:headless-app")
+include(":examples:gui-app")
 include(":gradle-plugins:dist")
 rootProject.name ="simple-java-launcher"
 pluginManagement {

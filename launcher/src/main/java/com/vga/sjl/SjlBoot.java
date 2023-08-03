@@ -124,9 +124,6 @@ public class SjlBoot {
             }
             System.exit(1);
         }
-        if(!argsList.contains("start")){
-            throw new Exception("only start|stop|status command are allowed");
-        }
         if(argsList.contains("-background")){
             if(port == 0){
                 throw new Exception("background mode is allowed only if controlPort is defined");
