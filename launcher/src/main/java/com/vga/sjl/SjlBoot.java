@@ -77,6 +77,15 @@ public class SjlBoot {
         if (configFileName == null && new File("config.properties").exists()) {
             configFileName = "config.properties";
         }
+        if (configFileName == null && new File("application.yml").exists()) {
+            configFileName = "application.yml";
+        }
+        if (configFileName == null && new File("application.yaml").exists()) {
+            configFileName = "application.yaml";
+        }
+        if (configFileName == null && new File("application.properties").exists()) {
+            configFileName = "application.properties";
+        }
         if (configFileName == null) {
             throw new IllegalArgumentException("Config file is not found");
         }
