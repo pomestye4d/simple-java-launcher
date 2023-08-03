@@ -1,5 +1,6 @@
 plugins {
     java
+    `maven-publish`
 }
 repositories{
     mavenCentral()
@@ -11,7 +12,7 @@ java{
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:5+")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
 }
 
 tasks.withType<Jar> {
@@ -22,4 +23,21 @@ tasks.withType<Jar> {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+publishing{
+    publications{
+        create<MavenPublication>("launcher") {
+            groupId = "com.vga.sjl"
+            artifactId = "launcher"
+            version = "0.0.1"
+            from(components["java"])
+        }
+    }
+    repositories {
+        maven{
+            name = "projectLocal"
+            url = project.file("../local-maven-repository").toURI()
+        }
+    }
 }

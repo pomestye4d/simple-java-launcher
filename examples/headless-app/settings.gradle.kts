@@ -1,1 +1,1 @@
-rootProject.name ="demo-headless"
+rootProject.name ="headless-app"

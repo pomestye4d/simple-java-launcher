@@ -31,13 +31,23 @@ import com.vga.sjl.restart.DeleteOperation;
 import com.vga.sjl.restart.MoveOperation;
 import com.vga.sjl.restart.RestartOperation;
 import com.vga.sjl.restart.SleepOperation;
+import com.vga.sjl.utils.SjlUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -67,6 +77,15 @@ public class SjlBoot {
         if (configFileName == null && new File("config.properties").exists()) {
             configFileName = "config.properties";
         }
+        if (configFileName == null && new File("application.yml").exists()) {
+            configFileName = "application.yml";
+        }
+        if (configFileName == null && new File("application.yaml").exists()) {
+            configFileName = "application.yaml";
+        }
+        if (configFileName == null && new File("application.properties").exists()) {
+            configFileName = "application.properties";
+        }
         if (configFileName == null) {
             throw new IllegalArgumentException("Config file is not found");
         }
@@ -84,8 +103,11 @@ public class SjlBoot {
             config = AppConfiguration.fromYaml(configFile);
         }
         List<String> argsList = Arrays.asList(args);
-        int port = Integer.parseInt(config.computeValue("sjl.controlPort", "21566"));
+        int port = Integer.parseInt(config.computeValue("sjl.controlPort", "0"));
         if(argsList.contains("stop")){
+            if(port == 0){
+                throw new Exception("stop command is allowed only if controlPort is defined");
+            }
             if(SjlControlThread.isApplicationRunning(port)){
                 if(!SjlControlThread.stopRunningApplication(port)){
                     throw new Exception("unable to stop application");
@@ -94,10 +116,18 @@ public class SjlBoot {
             return;
         }
         if(argsList.contains("status")){
+            if(port == 0){
+                throw new Exception("status command is allowed only if controlPort is defined");
+            }
             if(SjlControlThread.isApplicationRunning(port)){
                 System.exit(0);
             }
             System.exit(1);
+        }
+        if(argsList.contains("-background")){
+            if(port == 0){
+                throw new Exception("background mode is allowed only if controlPort is defined");
+            }
         }
         File libFolder = new File(config.computeValue("sjl.libFolder", "lib"));
         String applicationClass = config.computeValue("sjl.applicationClass", null);
@@ -110,21 +140,8 @@ public class SjlBoot {
         }
         File tempFile = new File(tempDirectory, "lock.tmp");
         FileLock fileLock = acquireLock(tempFile);
-        String externalsFileName = config.computeValue("sjl.externalsFileName", "lib/externals.txt");
         List<URL> urls = new ArrayList<>();
         if(libFolder.exists()) {
-            File externalsFile = new File(libFolder, externalsFileName);
-            if (externalsFile.exists()) {
-                try (InputStream is = new FileInputStream(externalsFile)) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                    String line = reader.readLine();
-                    while (line != null) {
-                        urls.add(new File(line).toURI().toURL());
-                        line = reader.readLine();
-                    }
-
-                }
-            }
             File[] files = libFolder.listFiles();
             if (files != null) {
                 for (File file : files) {
@@ -141,12 +158,12 @@ public class SjlBoot {
         Logger logger = Logger.getLogger(SjlBoot.class.getName());
 
         AtomicReference<Boolean> stopped = new AtomicReference<>(false);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> stopApplication(app, stopped)));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> stopApplication(app, stopped, fileLock, tempFile)));
         try {
             app.start(config, new ApplicationCallback() {
                 @Override
                 public void stop() {
-                    stopApplication(app, stopped);
+                    stopApplication(app, stopped, fileLock, tempFile);
                     System.exit(0);
                 }
 
@@ -180,7 +197,7 @@ public class SjlBoot {
                                 }
                             });
                             SjlExtStandardRepresenter representer = new SjlExtStandardRepresenter(SjlExtDumpSettings.builder().build());
-                            try (OutputStream os = new FileOutputStream(new File(tempDirectory, "restart.dat"))) {
+                            try (OutputStream os = Files.newOutputStream(new File(tempDirectory, "restart.dat").toPath())) {
                                 SjlExtYamlOutputStreamWriter writer = new SjlExtYamlOutputStreamWriter(os, StandardCharsets.UTF_8) {
                                     @Override
                                     public void processIOException(IOException e) {
@@ -193,28 +210,19 @@ public class SjlBoot {
                             logger.severe("unable to write restart instructions");
                         }
                     }
-                    stopApplication(app, stopped);
+                    stopApplication(app, stopped, fileLock, tempFile);
                     System.exit(2);
                 }
             });
         } catch (Exception e) {
-            stopApplication(app, stopped);
-            try {
-                fileLock.release();
-                fileLock.channel().close();
-                if (tempFile.exists() && !tempFile.delete()) {
-                    throw new Exception("unable to delete temp file " + tempFile);
-                }
-            } catch (Exception e2) {
-                logger.severe("unable to release lock");
-            }
+            stopApplication(app, stopped, fileLock, tempFile);
             throw e;
         }
         if(argsList.contains("-background")){
             new SjlControlThread(port, ()->{
-                stopApplication(app, stopped);
+                stopApplication(app, stopped, fileLock, tempFile);
                 return null;
-            }, fileLock, new File(tempDirectory, "lock.tmp")).start();
+            }).start();
             logger.info("application started in background mode");
             return;
         }
@@ -227,11 +235,7 @@ public class SjlBoot {
                 break;
             }
         } while ('q' != (char) c && 'Q' != (char) c);
-        try {
-            stopApplication(app,stopped);
-        } finally {
-            SjlControlThread.releaseLock(fileLock, tempFile);
-        }
+        stopApplication(app,stopped, fileLock, tempFile);
     }
 
     private static FileLock acquireLock(File tempFile) throws Exception {
@@ -244,10 +248,12 @@ public class SjlBoot {
             if (!tempFile.exists() && !tempFile.createNewFile()) {
                 throw new Exception("unable to create temp file");
             }
-            result = new RandomAccessFile(tempFile, "rwd").getChannel().tryLock();
-            if(result != null){
-                tempFile.deleteOnExit();
+            FileChannel channel = FileChannel.open(tempFile.toPath(), StandardOpenOption.WRITE);
+            result = channel.tryLock();
+            if(result == null){
+                channel.close();
             }
+            tempFile.deleteOnExit();
         } catch (Exception e) {
             throw new Exception(
                     "Another instance of the application is running. Please terminate and try again.", e);
@@ -259,7 +265,7 @@ public class SjlBoot {
         return result;
     }
 
-    private static void stopApplication(Application app, AtomicReference<Boolean> stopped) {
+    private static void stopApplication(Application app, AtomicReference<Boolean> stopped, FileLock fileLock, File tempFile) {
         Logger logger = Logger.getLogger(SjlBoot.class.getName());
         synchronized (lock) {
             if (!stopped.get()) {
@@ -269,7 +275,17 @@ public class SjlBoot {
                     app.stop();
                     logger.info("application is stopped");
                 } catch (Throwable e) {
-                    logger.warning(SjlControlThread.prepareLog("unable to stop application", e));
+                    logger.warning(SjlUtils.prepareLogMessage("unable to stop application", e));
+                } finally {
+                    try {
+                        fileLock.release();
+                        fileLock.channel().close();
+                        if (tempFile.exists() && !tempFile.delete()) {
+                            throw new Exception("unable to delete temp file " + tempFile);
+                        }
+                    } catch (Exception e) {
+                        logger.severe(SjlUtils.prepareLogMessage("unable to release temp file lock", e));
+                    }
                 }
             }
             lock.notifyAll();

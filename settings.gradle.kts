@@ -1,6 +1,14 @@
 include(":launcher")
-include(":updater")
-include(":gradle-plugin")
 include(":examples:headless-app")
 include(":examples:gui-app")
+include(":gradle-plugins:dist")
 rootProject.name ="simple-java-launcher"
+pluginManagement {
+    repositories {
+        maven{
+            name="local-project"
+            url = uri("local-maven-repository")
+        }
+        gradlePluginPortal()
+    }
+}

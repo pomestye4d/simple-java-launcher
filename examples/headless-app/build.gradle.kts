@@ -1,16 +1,17 @@
+import com.vga.sjl.gradle.dist.DistributionArchiveType
+import com.vga.sjl.gradle.dist.dist
+import org.gradle.api.plugins.internal.JavaPluginHelper
+
 plugins {
     java
-}
-buildscript {
-    dependencies{
-        classpath(files(File(projectDir.parentFile.parentFile, "gradle/sjl-gradle.jar")))
-        classpath("org.snakeyaml:snakeyaml-engine:2.5")
-        classpath("org.apache.httpcomponents.client5:httpclient5:5.1.3")
-        classpath("com.jcraft:jsch:0.1.55")
-    }
+    id("com.vga.sjl.dist") version "0.0.1"
 }
 repositories{
     mavenCentral()
+    maven {
+        name = "project-local"
+        url = project.file("../../local-maven-repository").toURI()
+    }
 }
 java{
     toolchain {
@@ -21,47 +22,30 @@ java{
 dependencies {
     implementation("org.apache.tomcat.embed:tomcat-embed-core:10.0.23")
     implementation("org.apache.tomcat.embed:tomcat-embed-jasper:10.0.23")
-    implementation(project(":launcher"))
+    implementation("com.vga.sjl:launcher:0.0.1")
 }
 
-configurations.create("dist"){
-    extendsFrom(configurations.getByName("implementation"))
+tasks.create("makeWar", War::class.java) {
+    group = "sjl"
+    from("webapp")
+    archiveFileName.set("webapp.war")
+    destinationDirectory.set(file("build/webapps"))
 }
 
-task("createWebApp", Jar::class){
-    dependsOn("build")
-    from("webapp"){
-        archiveFileName.set(file("build/webapps/webapp.war").absolutePath)
-    }
-}
-task("dist"){
-    group = "build"
-    dependsOn("build", "createWebApp")
-    doLast {
-        file("build/dist").deleteRecursively()
-        file("build/dist/lib").mkdirs()
-        file("build/libs/headless-app.jar").copyTo(file("build/dist/lib/headless-app.jar"))
-        configurations.getByName("dist").forEach {
-            it.copyTo(file("build/dist/lib/${it.name}"))
+dist {
+    common {
+        appName = "sjl-headless"
+        dependsOnTasks = arrayListOf("jar","makeWar")
+        useAmazonJreDownloadUrlResolver(8)
+        assets("lib"){
+            from("build/webapps")
         }
-        file("config.yml").copyTo(file("build/dist/config.yml"))
-        file("build/webapps/webapp.war").copyTo(file("build/dist/lib/webapp.war"))
-        file("../../native/unix-headless/cmake-build-debug/sjl").copyTo(file("build/dist/headless-app"))
-        file("build/dist/headless-app").setExecutable(true)
     }
-}
-
-task("deploy", com.vga.sjl.gradle.UpdateTask::class){
-    group = "build"
-    localLibsDirectory = file("build/dist/lib")
-    port = 8082
-    host = "localhost"
-//    ssh {
-//        sshHost = "localhost"
-//        sshPort = 22
-//        login = "login"
-//        password = "password"
-//        remotePort = 8081
-//        privateKey = file("path_to_private_key_file")
-//    }
+    linux64Directory("sjl-headless-linux-dir"){
+        config("config/config.yml", "config.yml")
+    }
+    linux64Archive("sjl-headless-linux-archive"){
+        config("config/config.yml", "config.yml")
+        archiveType = DistributionArchiveType.TARGZ
+    }
 }
