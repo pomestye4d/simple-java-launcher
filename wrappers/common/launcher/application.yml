@@ -1,0 +1,6 @@
+# comment
+sjl:
+  # comment
+  javaHome: jre
+  libFolder: lib
+  tempFolder: temp  

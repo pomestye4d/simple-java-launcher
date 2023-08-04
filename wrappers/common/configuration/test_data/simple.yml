@@ -1,0 +1,15 @@
+# comment
+sjl:
+  # comment
+  javaHome: /javaHome
+  libFolder: /libFolder
+  tempFolder: /tempFolder
+  args:
+   - arg1=value1
+   - arg2=Значение
+  other: otherValue
+  otherArray:
+    - value1
+other:
+  key: value
+
